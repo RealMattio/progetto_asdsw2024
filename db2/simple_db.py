@@ -56,6 +56,14 @@ def get(key):
 
     return jsonify({"key": data['key'], "value": data['value']})
 
-init_db()  # Ensure the database is initialized before starting the app
-app.run()
+@app.route('/status', methods=['GET'])
+def status():
+    return jsonify({"status": "OK"})
+
+def run_flask():
+    init_db()  # Ensure the database is initialized before starting the app
+    app.run()
+
+if __name__ == '__main__':
+   run_flask()
 

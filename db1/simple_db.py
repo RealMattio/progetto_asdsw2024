@@ -1,5 +1,5 @@
 from flask import Flask, request, jsonify
-import sqlite3, time, threading
+import sqlite3
 
 app = Flask(__name__)
 
@@ -56,24 +56,13 @@ def get(key):
 
     return jsonify({"key": data['key'], "value": data['value']})
 
+@app.route('/status', methods=['GET'])
+def status():
+    return jsonify({"status": "OK"})
+
 def run_flask():
     init_db()  # Ensure the database is initialized before starting the app
     app.run()
 
-def print_vivo():
-    while True:
-        print('vivo')
-        time.sleep(3)
-
 if __name__ == '__main__':
-
-    flask_thread = threading.Thread(target=run_flask)
-    vivo_thread = threading.Thread(target=print_vivo)
-
-    flask_thread.start()
-    print("Server started")
-    vivo_thread.start()
-
-    flask_thread.join()
-    vivo_thread.join()
-
+   run_flask()

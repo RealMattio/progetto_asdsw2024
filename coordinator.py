@@ -58,12 +58,19 @@ def get(key):
 # aggiungere la verifica del quorum in scrittura
 @app.route('/put/<int:N>', methods=['POST'])
 def put(N):
+    '''
     d = request.json
     key = d["key"]
     lista_server = get_server(str(key), N) # restituisce la lista dei server in cui salvare la chiave
     for server in lista_server:
         h = {'Content-Type': 'application/json'}
         r = requests.post(server + 'put', json=d, headers=h)
+    return d
+    '''
+    d = request.json
+    key = d["key"]
+    h = {'Content-Type': 'application/json'}
+    r = requests.post(get_server(str(key)) + 'put', json=d, headers=h)
     return d
 
 def status():

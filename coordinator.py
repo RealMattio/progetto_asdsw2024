@@ -64,6 +64,8 @@ def status():
         for server in active_servers:
             if active_servers[server] == 0 and server in servers:
                 servers.remove(server)
+            elif active_servers[server] == 1 and server not in servers:
+                servers.append(server)
         print(active_servers, servers)
         time.sleep(5)
 

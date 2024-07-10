@@ -17,6 +17,9 @@ active_servers = {server:0 for server in servers}
 def hash_function(key):
     return int(hashlib.md5(key.encode()).hexdigest(), 16)
 
+# questa funzione deve essere modificata affinché restituisca tutti gli N (scelto dall'utente) server nei quali salverò la chiave
+# bisogna passargli sia la chiave che il numero di server da restituire
+# bisogna scegliere la strategia con cui scegliere i server
 def get_server(key):
     server_hashes = {hash_function(server+'1'): server for server in servers}
     for i in range(2,10):
@@ -32,6 +35,9 @@ def get_server(key):
     
     return server_hashes[sorted_hashes[0]]
 
+# deve essere modificata affinché la ricerca venga fatta su tutti i server e restituisca il valore della chiave
+# in funzione della max membership rule
+# 
 @app.route('/get/<int:key>', methods=['GET'])
 def get(key):
     server_url = get_server(str(key)) + 'get/' + str(key)
@@ -48,12 +54,16 @@ def get(key):
         return jsonify({'error': 'Backend server error', 'server': server_url}), 500
 
 
-@app.route('/put', methods=['POST'])
-def put():
+# deve essere modificata affinché la chiave venga salvata in tutti i server restituiti da get_server
+# aggiungere la verifica del quorum in scrittura
+@app.route('/put/<int:N>', methods=['POST'])
+def put(N):
     d = request.json
     key = d["key"]
-    h = {'Content-Type': 'application/json'};
-    r = requests.post(get_server(str(key)) + 'put', json=d, headers=h)
+    lista_server = get_server(str(key), N) # restituisce la lista dei server in cui salvare la chiave
+    for server in lista_server:
+        h = {'Content-Type': 'application/json'}
+        r = requests.post(server + 'put', json=d, headers=h)
     return d
 
 def status():
@@ -64,8 +74,9 @@ def status():
         for server in active_servers:
             if active_servers[server] == 0 and server in servers:
                 servers.remove(server)
-            elif active_servers[server] == 1 and server not in servers:
+            elif active_servers[server] == 1 and server not in servers: #server che da down diventa up
                 servers.append(server)
+                # aggiornare il server che è tornato attivo con i nuovi valori
         print(active_servers, servers)
         time.sleep(5)
 
@@ -81,6 +92,12 @@ def check_status():
         except requests.exceptions.RequestException:
             active_servers[server] = 0
     #return jsonify(active_servers)
+
+# aggiorna il server che è tornato attivo con i valori degli altri server
+def update(server_down):
+    # ottengo tutti i valori che sono salvati nel server che è tornato attivo
+    return 
+
 
 if __name__ == '__main__':
     # Start the Flask app in a separate thread

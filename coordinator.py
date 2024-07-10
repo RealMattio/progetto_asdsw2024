@@ -56,8 +56,8 @@ def get(key):
 
 # deve essere modificata affinché la chiave venga salvata in tutti i server restituiti da get_server
 # aggiungere la verifica del quorum in scrittura
-@app.route('/put/<int:N>', methods=['POST'])
-def put(N):
+@app.route('/put', methods=['POST'])
+def put():
     '''
     d = request.json
     key = d["key"]
@@ -73,6 +73,19 @@ def put(N):
     r = requests.post(get_server(str(key)) + 'put', json=d, headers=h)
     return d
 
+# aggiorna il server che è tornato attivo con i valori degli altri server
+def update(server_down):
+    # ottengo tutti i valori che sono salvati nel server che è tornato attivo
+    response = requests.get(server_down + 'get_all')
+    data = response.json()
+    for key in data:
+        #per ogni valore nel server tornato up faccio un get dagli altri server e un put sul server tornato up per aggiornare il valore
+        #faccio una richiest a se stesso per ottenere il valore
+        resp = requests.get(app.url_defaults + 'get/' + str(key))
+        r = requests.post(server_down + 'put', json=resp.json())
+    #print(response.json(), type(response))
+    return jsonify({"status" : f"server {server_down} updated"})
+
 def status():
     global active_servers
     global servers
@@ -82,6 +95,7 @@ def status():
             if active_servers[server] == 0 and server in servers:
                 servers.remove(server)
             elif active_servers[server] == 1 and server not in servers: #server che da down diventa up
+                update(server)
                 servers.append(server)
                 # aggiornare il server che è tornato attivo con i nuovi valori
         print(active_servers, servers)
@@ -99,11 +113,6 @@ def check_status():
         except requests.exceptions.RequestException:
             active_servers[server] = 0
     #return jsonify(active_servers)
-
-# aggiorna il server che è tornato attivo con i valori degli altri server
-def update(server_down):
-    # ottengo tutti i valori che sono salvati nel server che è tornato attivo
-    return 
 
 
 if __name__ == '__main__':

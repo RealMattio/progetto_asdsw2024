@@ -28,13 +28,16 @@ def put():
 
     conn = get_db_connection()
     cursor = conn.cursor()
-
+    
     # Check if the URL already exists in the database
     result = cursor.execute('SELECT value FROM keyvalue WHERE key = ?', (key,)).fetchone()
+    # If it does, update the URL
     if result:
+        cursor.execute('UPDATE keyvalue SET value = ? WHERE key = ?', (value, key,))
+        conn.commit()
         conn.close()
-        return jsonify({"success": False, "key": key, "value": result['value']}), 200
-
+        return jsonify({"success": True, "key": key, "value": result['value']}), 200
+    
     # If not, insert new URL into the database
     try:
         cursor.execute('INSERT INTO keyvalue (key, value) VALUES (?,?)', (key, value,))
@@ -49,12 +52,32 @@ def put():
 def get(key):
     # If not in cache, query the database
     conn = get_db_connection()
-    data = conn.execute('SELECT * FROM keyvalue WHERE key = ?', (key,)).fetchone()
+    stringa = 'SELECT * FROM keyvalue WHERE key = ' + key
+    data = conn.execute(stringa).fetchone()
+    print(data)
     conn.close()
     if data is None:
         return jsonify({"error": "Not found"}), 404
 
     return jsonify({"key": data['key'], "value": data['value']})
+
+# rotta per ottenere tutti i valori dal database affinchè possa essere aggiornato dopo il down
+@app.route('/get_all', methods=['GET'])
+def get_all():
+    # Connettersi al database
+    conn = get_db_connection()
+    cursor = conn.cursor()
+
+    # Eseguire la query per ottenere tutti i valori dalla tabella
+    cursor.execute('SELECT key FROM keyvalue')
+    # Recuperare tutti i risultati della query
+    rows = cursor.fetchall()
+    rows_list = []
+    # Chiudere la connessione al database
+    conn.close()
+    for row in rows:
+        rows_list.append(row['key'])
+    return jsonify(rows_list)
 
 @app.route('/status', methods=['GET'])
 def status():

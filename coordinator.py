@@ -166,10 +166,13 @@ def check_status():
             active_servers[server] = 0
     #return jsonify(active_servers)
 
+def run():
+    app.run(host=host, port=port)
+
 
 if __name__ == '__main__':
     # Start the Flask app in a separate thread
-    threading.Thread(target=app.run).start()
+    threading.Thread(target=run).start()
     #threading.Thread(target=app.run(host=host, port=port)).start()
     #app.run(debug=True)
 

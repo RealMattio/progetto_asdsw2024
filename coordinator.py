@@ -4,6 +4,9 @@ import hashlib
 import threading, time
 
 app = Flask(__name__)
+host = '127.0.0.1'
+port = 5000
+coordinator_url = f'http://{host}:{port}/'
 
 servers = [
     "http://localhost:6000/",
@@ -29,48 +32,29 @@ def get_server(key, N):
     
     key_hash = hash_function(key)
     selected_servers = [] # Raccoglie i primi N server dalla lista ordinata in ordine crescente
-    print('\n\n', server_hashes, '\n\n', sorted_hashes)
-    
+        
     for server_hash in sorted_hashes:
         if key_hash < server_hash:
-            #selected_servers.append(server_hashes[server_hash])
-            indice = sorted_hashes.index(server_hash)
+            indice = sorted_hashes.index(server_hash) # indice del primo server con hash maggiore dell'hash della chiave
 
+            # se l'indice è minore di len(sorted_hashes) - N, allora prenderò tutti gli N server che seguono il server trovato
             if indice < len(sorted_hashes) - N:
                 selected_servers.append(server_hashes[server_hash])
                 for i in range(1, N):
                     selected_servers.append(server_hashes[sorted_hashes[indice + i]])
-                print("\n\n", selected_servers, "\n\n")   
-                return selected_servers # Il primo server che ha hash maggiore dell'hash della chiave
+                return selected_servers # restituisco la lista di server selezionati
+            
+            # altrimenti prendo i server rimanenti fino alla fine della lista e poi ricomincio dall'inizio
             else:
-                print('\n indice:' , indice)
                 selected_servers.extend([server_hashes[sorted_hashes[j]] for j in range(indice, len(sorted_hashes))])
                 h = N - (len(sorted_hashes) - indice+1)
-                print(selected_servers)
-                print('\n h:' , h)
                 selected_servers.extend([server_hashes[sorted_hashes[j]] for j in range(h+1)])
-                print("\n\n", selected_servers, "\n\n")   
                 return selected_servers 
 
     # Se non è stato trovato un server con hash maggiore dell'hash della chiave
     for i in range(0, N):
         selected_servers.append(server_hashes[sorted_hashes[i]])
-    print("\n\n', selected_servers, '\n\n")
     return selected_servers
-
-
-    '''
-    for server_hash in sorted_hashes: #iterando sugli hash ordinati in modo crescente
-        if len(selected_servers) < N: #se il numero dei server è inferiore o uguale a N (numero di repliche che voglio per la chiave specificata)
-            selected_servers.append(server_hashes[server_hash]) #aggiungo il server corrispondente all'hash corrente, alla lista 'selected_servers'
-        else:
-            break
-    
-    print("\n\n", selected_servers, "\n\n")        
-    return selected_servers
-    '''
-    
-    
    
 
 # deve essere modificata affinché la ricerca venga fatta su tutti i server e restituisca il valore della chiave
@@ -111,6 +95,7 @@ def get(key):
 @app.route('/put/<int:N>/<int:W>', methods=['POST'])
 def put(N, W): 
     d = request.json
+    print(f'd: {d}')
     key = d["key"]
     h = {'Content-Type': 'application/json'}
     server_su_cui_scrivere = get_server(str(key), N) # restituisce la lista dei server in cui salvare la chiave
@@ -138,13 +123,19 @@ def update(server_down):
     for key in data:
         #per ogni valore nel server tornato up faccio un get dagli altri server e un put sul server tornato up per aggiornare il valore
         #faccio una richiest a se stesso per ottenere il valore
-        resp = requests.get(app.url_defaults + 'get/' + str(key))
-        r = requests.post(server_down + 'put', json=resp.json())
-    #print(response.json(), type(response))
-    return jsonify({"status" : f"server {server_down} updated"})
+        resp = requests.get(coordinator_url + 'get/' + str(key)).json()
+        
+        message = {"key": resp['key'], "value": resp['value']}
+        header = {'Content-Type': 'application/json'}
 
-
-
+        try :
+            r = requests.post(server_down + 'put', json=message, headers=header)
+            if r.status_code == 200:
+                print(f"key {key} updated in server {server_down}\n")
+        except requests.exceptions.RequestException:
+            print(f"key {key} not updated in server {server_down}\n")
+            continue
+    return 
 
 def status():
     global active_servers
@@ -155,10 +146,11 @@ def status():
             if active_servers[server] == 0 and server in servers:
                 servers.remove(server)
             elif active_servers[server] == 1 and server not in servers: #server che da down diventa up
-                #update(server)
+                update(server)
                 servers.append(server)
                 # aggiornare il server che è tornato attivo con i nuovi valori
-        print(active_servers, servers)
+        print(servers)
+        #print(active_servers, servers)
         time.sleep(5)
 
 def check_status():
@@ -178,6 +170,7 @@ def check_status():
 if __name__ == '__main__':
     # Start the Flask app in a separate thread
     threading.Thread(target=app.run).start()
+    #threading.Thread(target=app.run(host=host, port=port)).start()
     #app.run(debug=True)
 
     # Start the status monitoring in a separate thread

@@ -52,9 +52,9 @@ def put():
 def get(key):
     # If not in cache, query the database
     conn = get_db_connection()
-    stringa = 'SELECT * FROM keyvalue WHERE key = ' + key
+    stringa = 'SELECT * FROM keyvalue WHERE key = ' + str(key)
     data = conn.execute(stringa).fetchone()
-    print(data)
+    #print(data)
     conn.close()
     if data is None:
         return jsonify({"error": "Not found"}), 404

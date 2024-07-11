@@ -20,23 +20,56 @@ def hash_function(key):
 # questa funzione deve essere modificata affinché restituisca tutti gli N (scelto dall'utente) server nei quali salverò la chiave
 # bisogna passargli sia la chiave che il numero di server da restituire
 # bisogna scegliere la strategia con cui scegliere i server
-def get_server(key, N): #Obiettivo: restituire una lista di N server in cui salvare la chiave
-    server_hashes = {hash_function(server+'1'): server for server in servers} #mappa ogni server ad un ash
-    for i in range(2,10):
-        server_hashes.update({hash_function(server+str(i)): server for server in servers})
-   
-    sorted_hashes = sorted(server_hashes.keys()) #ordina gli ash
+def get_server(key, N): 
+    # Mappa ogni server a un hash
+    server_hashes = {hash_function(server + '1'): server for server in servers} 
+    
+    # Ordina gli hash
+    sorted_hashes = list(sorted(server_hashes.keys())) 
     
     key_hash = hash_function(key)
-    selected_servers = [] #raccoglie i primi N server dalla lista ordinata
+    selected_servers = [] # Raccoglie i primi N server dalla lista ordinata in ordine crescente
+    print('\n\n', server_hashes, '\n\n', sorted_hashes)
     
+    for server_hash in sorted_hashes:
+        if key_hash < server_hash:
+            #selected_servers.append(server_hashes[server_hash])
+            indice = sorted_hashes.index(server_hash)
+
+            if indice < len(sorted_hashes) - N:
+                selected_servers.append(server_hashes[server_hash])
+                for i in range(1, N):
+                    selected_servers.append(server_hashes[sorted_hashes[indice + i]])
+                print("\n\n", selected_servers, "\n\n")   
+                return selected_servers # Il primo server che ha hash maggiore dell'hash della chiave
+            else:
+                print('\n indice:' , indice)
+                selected_servers.extend([server_hashes[sorted_hashes[j]] for j in range(indice, len(sorted_hashes))])
+                h = N - (len(sorted_hashes) - indice+1)
+                print(selected_servers)
+                print('\n h:' , h)
+                selected_servers.extend([server_hashes[sorted_hashes[j]] for j in range(h+1)])
+                print("\n\n", selected_servers, "\n\n")   
+                return selected_servers 
+
+    # Se non è stato trovato un server con hash maggiore dell'hash della chiave
+    for i in range(0, N):
+        selected_servers.append(server_hashes[sorted_hashes[i]])
+    print("\n\n', selected_servers, '\n\n")
+    return selected_servers
+
+
+    '''
     for server_hash in sorted_hashes: #iterando sugli hash ordinati in modo crescente
         if len(selected_servers) < N: #se il numero dei server è inferiore o uguale a N (numero di repliche che voglio per la chiave specificata)
             selected_servers.append(server_hashes[server_hash]) #aggiungo il server corrispondente all'hash corrente, alla lista 'selected_servers'
         else:
             break
-    print(selected_servers)
+    
+    print("\n\n", selected_servers, "\n\n")        
     return selected_servers
+    '''
+    
     
    
 
@@ -122,7 +155,7 @@ def status():
             if active_servers[server] == 0 and server in servers:
                 servers.remove(server)
             elif active_servers[server] == 1 and server not in servers: #server che da down diventa up
-                update(server)
+                #update(server)
                 servers.append(server)
                 # aggiornare il server che è tornato attivo con i nuovi valori
         print(active_servers, servers)

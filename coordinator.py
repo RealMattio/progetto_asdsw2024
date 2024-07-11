@@ -40,24 +40,39 @@ def get_server(key):
 # 
 @app.route('/get/<int:key>', methods=['GET'])
 def get(key):
-    server_url = get_server(str(key)) + 'get/' + str(key)
+    key = str(key)
+    responses = {}
 
-    try:
-        response = requests.get(server_url)
-        if response.status_code == 200:
-            result = response.json()
-            result['server'] = server_url
-            return jsonify(result), 200
-        else:
-            return jsonify({'error': 'Failed to get the (key,value) element', 'server': server_url}), 500
-    except requests.exceptions.RequestException:
-        return jsonify({'error': 'Backend server error', 'server': server_url}), 500
+    # Iterate over all servers
+    for server in servers:
+        server_url = server + 'get/' + key
+        try:
+            response = requests.get(server_url)
+            if response.status_code == 200:
+                result = response.json()
+                value = result.get('value')
+                if value in responses:
+                    responses[value] += 1
+                else:
+                    responses[value] = 1
+        except requests.exceptions.RequestException:
+            continue
+
+    if not responses:
+        return jsonify({'error': 'Failed to get the (key,value) element from any server'}), 500
+
+    # Determine the value based on the max membership quorum rule
+    max_value = max(responses, key=responses.get)
+    max_count = responses[max_value]
+
+    return jsonify({'key': key, 'value': max_value, 'count': max_count}), 200
+
 
 
 # deve essere modificata affinché la chiave venga salvata in tutti i server restituiti da get_server
 # aggiungere la verifica del quorum in scrittura
-@app.route('/put/<int:N>', methods=['POST'])
-def put(N):
+@app.route('/put', methods=['POST'])
+def put():
     '''
     d = request.json
     key = d["key"]
@@ -72,6 +87,7 @@ def put(N):
     h = {'Content-Type': 'application/json'}
     r = requests.post(get_server(str(key)) + 'put', json=d, headers=h)
     return d
+    
 
 def status():
     global active_servers

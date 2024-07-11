@@ -95,7 +95,6 @@ def get(key):
 @app.route('/put/<int:N>/<int:W>', methods=['POST'])
 def put(N, W): 
     d = request.json
-    print(f'd: {d}')
     key = d["key"]
     h = {'Content-Type': 'application/json'}
     server_su_cui_scrivere = get_server(str(key), N) # restituisce la lista dei server in cui salvare la chiave
@@ -173,9 +172,7 @@ def run():
 if __name__ == '__main__':
     # Start the Flask app in a separate thread
     threading.Thread(target=run).start()
-    #threading.Thread(target=app.run(host=host, port=port)).start()
-    #app.run(debug=True)
-
+    
     # Start the status monitoring in a separate thread
     threading.Thread(target=status).start()
 

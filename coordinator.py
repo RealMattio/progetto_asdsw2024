@@ -20,20 +20,25 @@ def hash_function(key):
 # questa funzione deve essere modificata affinché restituisca tutti gli N (scelto dall'utente) server nei quali salverò la chiave
 # bisogna passargli sia la chiave che il numero di server da restituire
 # bisogna scegliere la strategia con cui scegliere i server
-def get_server(key):
-    server_hashes = {hash_function(server+'1'): server for server in servers}
+def get_server(key, N): #Obiettivo: restituire una lista di N server in cui salvare la chiave
+    server_hashes = {hash_function(server+'1'): server for server in servers} #mappa ogni server ad un ash
     for i in range(2,10):
         server_hashes.update({hash_function(server+str(i)): server for server in servers})
    
-    sorted_hashes = sorted(server_hashes.keys())
+    sorted_hashes = sorted(server_hashes.keys()) #ordina gli ash
     
     key_hash = hash_function(key)
+    selected_servers = [] #raccoglie i primi N server dalla lista ordinata
     
-    for server_hash in sorted_hashes:
-        if key_hash < server_hash:
-            return server_hashes[server_hash]
+    for server_hash in sorted_hashes: #iterando sugli hash ordinati in modo crescente
+        if len(selected_servers) < N: #se il numero dei server è inferiore o uguale a N (numero di repliche che voglio per la chiave specificata)
+            selected_servers.append(server_hashes[server_hash]) #aggiungo il server corrispondente all'hash corrente, alla lista 'selected_servers'
+        else:
+            break
+    print(selected_servers)
+    return selected_servers
     
-    return server_hashes[sorted_hashes[0]]
+   
 
 # deve essere modificata affinché la ricerca venga fatta su tutti i server e restituisca il valore della chiave
 # in funzione della max membership rule
@@ -68,26 +73,29 @@ def get(key):
     return jsonify({'key': key, 'value': max_value, 'count': max_count}), 200
 
 
-
 # deve essere modificata affinché la chiave venga salvata in tutti i server restituiti da get_server
 # aggiungere la verifica del quorum in scrittura
-@app.route('/put', methods=['POST'])
-def put():
-    '''
-    d = request.json
-    key = d["key"]
-    lista_server = get_server(str(key), N) # restituisce la lista dei server in cui salvare la chiave
-    for server in lista_server:
-        h = {'Content-Type': 'application/json'}
-        r = requests.post(server + 'put', json=d, headers=h)
-    return d
-    '''
+@app.route('/put/<int:N>/<int:W>', methods=['POST'])
+def put(N, W): 
     d = request.json
     key = d["key"]
     h = {'Content-Type': 'application/json'}
-    r = requests.post(get_server(str(key)) + 'put', json=d, headers=h)
-    return d
-    
+    server_su_cui_scrivere = get_server(str(key), N) # restituisce la lista dei server in cui salvare la chiave
+    success_count = 0
+    for server in server_su_cui_scrivere :
+        
+        try:
+            r = requests.post(server + 'put', json=d, headers=h)
+            if r.status_code == 200:
+                success_count += 1
+        except requests.exceptions.RequestException:
+            continue
+
+    if success_count >= W:
+        return jsonify({'message': 'Write successful', 'key': key, 'value': d['value']}), 200
+    else:
+        return jsonify({'error': 'Failed to achieve write quorum'}), 500
+   
 
 # aggiorna il server che è tornato attivo con i valori degli altri server
 def update(server_down):
@@ -101,6 +109,9 @@ def update(server_down):
         r = requests.post(server_down + 'put', json=resp.json())
     #print(response.json(), type(response))
     return jsonify({"status" : f"server {server_down} updated"})
+
+
+
 
 def status():
     global active_servers

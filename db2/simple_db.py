@@ -3,6 +3,9 @@ import sqlite3
 
 app = Flask(__name__)
 
+host = '0.0.0.0'
+port = 6001
+
 def get_db_connection():
     conn = sqlite3.connect('keyvalue.db')
     conn.row_factory = sqlite3.Row
@@ -36,7 +39,7 @@ def put():
         cursor.execute('UPDATE keyvalue SET value = ? WHERE key = ?', (value, key,))
         conn.commit()
         conn.close()
-        return jsonify({"success": True, "key": key, "value": result['value']}), 200
+        return jsonify({"success": True, "key": key, "value": result['value']}), 201
     
     # If not, insert new URL into the database
     try:
@@ -85,7 +88,7 @@ def status():
 
 def run_flask():
     init_db()  # Ensure the database is initialized before starting the app
-    app.run()
+    app.run(host=host, port=port)
 
 if __name__ == '__main__':
    run_flask()

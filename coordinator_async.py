@@ -100,7 +100,7 @@ def get(key):
     return jsonify({'key': key, 'value': max_value, 'count': max_count}), 200
 
 def writing_on_servers(server_su_cui_scrivere, d):
-    time.sleep(4)
+    #time.sleep(4)
     success_count = 0
     N = len(server_su_cui_scrivere)
     h = {'Content-Type': 'application/json'}

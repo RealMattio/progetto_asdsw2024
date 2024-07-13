@@ -12,7 +12,7 @@ servers = [
     "http://localhost:6000/",
     "http://localhost:6001/",
     "http://localhost:6002/",
-    "http://localhost:6003/"
+    "http://localhost:6003/",
     "http://localhost:6004/",
     "http://localhost:6005/",
     "http://localhost:6006/",
